@@ -50,6 +50,7 @@ class _TimerHomePageState extends State<TimerHomePage>
   // Animation controllers
   late AnimationController _pulseController;
   late AnimationController _blinkController;
+  late AnimationController _finishController;
 
   @override
   void initState() {
@@ -64,6 +65,11 @@ class _TimerHomePageState extends State<TimerHomePage>
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
+    _finishController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
     _nameFocusNode.addListener(() {
       if (!_nameFocusNode.hasFocus) {
         setState(() => _isEditingName = false);
@@ -76,6 +82,7 @@ class _TimerHomePageState extends State<TimerHomePage>
     _timer?.cancel();
     _pulseController.dispose();
     _blinkController.dispose();
+    _finishController.dispose();
     _nameController.dispose();
     _nameFocusNode.dispose();
     _hoursController.dispose();
@@ -113,6 +120,7 @@ class _TimerHomePageState extends State<TimerHomePage>
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
           t.cancel();
+          _finishController.repeat(reverse: true);
         }
       });
     });
@@ -132,6 +140,7 @@ class _TimerHomePageState extends State<TimerHomePage>
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
           t.cancel();
+          _finishController.repeat(reverse: true);
         }
       });
     });
@@ -139,6 +148,8 @@ class _TimerHomePageState extends State<TimerHomePage>
 
   void _resetTimer() {
     _timer?.cancel();
+    _finishController.stop();
+    _finishController.reset();
     setState(() {
       _elapsed = Duration.zero;
       _status = TimerStatus.idle;
@@ -173,7 +184,7 @@ class _TimerHomePageState extends State<TimerHomePage>
   }
 
   Color get _timerColor {
-    if (_mode == TimerMode.stopwatch) return const Color(0xFF1A1A1A); // Stopwatch never triggers urgency
+    if (_mode == TimerMode.stopwatch) return const Color(0xFF1A1A1A);
     
     if (_status == TimerStatus.finished) return const Color(0xFFB71C1C);
     final remaining = _targetDuration - _elapsed;
@@ -182,6 +193,11 @@ class _TimerHomePageState extends State<TimerHomePage>
     }
     return const Color(0xFF1A1A1A);
   }
+
+  bool get _isUrgent =>
+      _mode == TimerMode.countdown &&
+      _status == TimerStatus.running &&
+      (_targetDuration - _elapsed).inSeconds <= 30;
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -212,6 +228,18 @@ class _TimerHomePageState extends State<TimerHomePage>
 
           // ── Floating action buttons ─────────────────────────────────
           if (!_showSettings) _buildFloatingButtons(),
+
+          // ── Countdown-finish flash overlay ──────────────────────────
+          if (_status == TimerStatus.finished)
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _finishController,
+                builder: (context, _) => Container(
+                  color: const Color(0xFFB71C1C)
+                      .withValues(alpha: 0.06 + _finishController.value * 0.10),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -234,7 +262,6 @@ class _TimerHomePageState extends State<TimerHomePage>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top bar, Timer card, Bottom Label perfectly aligned vertically & bounded horizontally
         Expanded(
           flex: 6,
           child: Row(
@@ -251,7 +278,10 @@ class _TimerHomePageState extends State<TimerHomePage>
                       nameFocusNode: _nameFocusNode,
                       onNameTap: () => setState(() => _isEditingName = true),
                       onNameSubmit: () => setState(() => _isEditingName = false),
-                    ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 500.ms)
+                        .slideY(begin: -0.08, duration: 500.ms, curve: Curves.easeOutCubic),
                     SizedBox(height: spacing),
                     Expanded(
                       flex: 8,
@@ -260,12 +290,24 @@ class _TimerHomePageState extends State<TimerHomePage>
                         timeString: _formatTimerDisplay(),
                         status: _status,
                         timerColor: _timerColor,
+                        isUrgent: _isUrgent,
                         pulseController: _pulseController,
                         blinkController: _blinkController,
-                      ),
+                        finishController: _finishController,
+                      )
+                          .animate()
+                          .fadeIn(duration: 700.ms, delay: 100.ms)
+                          .scale(
+                            begin: const Offset(0.94, 0.94),
+                            duration: 700.ms,
+                            delay: 100.ms,
+                            curve: Curves.easeOutBack,
+                          ),
                     ),
                     SizedBox(height: spacing * 0.6),
-                    _BottomLabel(nameController: _nameController),
+                    _BottomLabel(nameController: _nameController)
+                        .animate()
+                        .fadeIn(duration: 500.ms, delay: 200.ms),
                     const Spacer(),
                   ],
                 ),
@@ -279,7 +321,10 @@ class _TimerHomePageState extends State<TimerHomePage>
           flex: 4,
           child: _ContestantPanel(
             number: _contestantNumber,
-          ),
+          )
+              .animate()
+              .fadeIn(duration: 700.ms, delay: 150.ms)
+              .slideX(begin: 0.08, duration: 700.ms, delay: 150.ms, curve: Curves.easeOutCubic),
         ),
       ],
     );
@@ -289,7 +334,6 @@ class _TimerHomePageState extends State<TimerHomePage>
     final spacing = (size.height * 0.02).clamp(12.0, 32.0);
     return Column(
       children: [
-        // Top bar, Timer card, Bottom Label perfectly constraint matched
         Expanded(
           flex: 6,
           child: Row(
@@ -306,18 +350,33 @@ class _TimerHomePageState extends State<TimerHomePage>
                         nameFocusNode: _nameFocusNode,
                         onNameTap: () => setState(() => _isEditingName = true),
                         onNameSubmit: () => setState(() => _isEditingName = false),
-                      ),
+                      )
+                          .animate()
+                          .fadeIn(duration: 500.ms)
+                          .slideY(begin: -0.08, duration: 500.ms, curve: Curves.easeOutCubic),
                       SizedBox(height: spacing),
                       _TimerCard(
                         mode: _mode,
                         timeString: _formatTimerDisplay(),
                         status: _status,
                         timerColor: _timerColor,
+                        isUrgent: _isUrgent,
                         pulseController: _pulseController,
                         blinkController: _blinkController,
-                      ),
+                        finishController: _finishController,
+                      )
+                          .animate()
+                          .fadeIn(duration: 700.ms, delay: 100.ms)
+                          .scale(
+                            begin: const Offset(0.94, 0.94),
+                            duration: 700.ms,
+                            delay: 100.ms,
+                            curve: Curves.easeOutBack,
+                          ),
                       SizedBox(height: spacing * 0.75),
-                      _BottomLabel(nameController: _nameController),
+                      _BottomLabel(nameController: _nameController)
+                          .animate()
+                          .fadeIn(duration: 500.ms, delay: 200.ms),
                     ],
                   ),
                 ),
@@ -328,9 +387,12 @@ class _TimerHomePageState extends State<TimerHomePage>
         // Contestant panel
         Expanded(
           flex: 4,
-          child: _ContestantPanel(number: _contestantNumber),
+          child: _ContestantPanel(number: _contestantNumber)
+              .animate()
+              .fadeIn(duration: 700.ms, delay: 200.ms)
+              .slideY(begin: 0.08, duration: 700.ms, delay: 200.ms, curve: Curves.easeOutCubic),
         ),
-        const SizedBox(height: 90), // Reserved space for floating action buttons
+        const SizedBox(height: 90),
       ],
     );
   }
@@ -662,7 +724,7 @@ class _TimerHomePageState extends State<TimerHomePage>
             tooltip: 'Settings',
             onTap: () => setState(() => _showSettings = true),
             overrideSize: smallSize,
-          ),
+          ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideX(begin: 0.3, duration: 400.ms, delay: 400.ms, curve: Curves.easeOutCubic),
           SizedBox(height: 8 * scale),
           // Play / Pause / Resume
           if (_status == TimerStatus.idle || _status == TimerStatus.finished)
@@ -673,7 +735,7 @@ class _TimerHomePageState extends State<TimerHomePage>
               onTap: _startTimer,
               large: true,
               overrideSize: largeSize,
-            )
+            ).animate().fadeIn(duration: 400.ms, delay: 500.ms).slideX(begin: 0.3, duration: 400.ms, delay: 500.ms, curve: Curves.easeOutCubic)
           else if (_status == TimerStatus.running)
             _FloatingBtn(
               icon: Icons.pause_rounded,
@@ -707,7 +769,7 @@ class _TimerHomePageState extends State<TimerHomePage>
             tooltip: _isFullscreen ? 'Exit Fullscreen' : 'Fullscreen',
             onTap: _toggleFullscreen,
             overrideSize: smallSize,
-          ),
+          ).animate().fadeIn(duration: 400.ms, delay: 600.ms).slideX(begin: 0.3, duration: 400.ms, delay: 600.ms, curve: Curves.easeOutCubic),
         ],
       ),
     );
@@ -716,7 +778,9 @@ class _TimerHomePageState extends State<TimerHomePage>
 
 // ─── Floating Button ──────────────────────────────────────────────────────────
 
-class _FloatingBtn extends StatelessWidget {
+// ─── Floating Button ──────────────────────────────────────────────────────────
+
+class _FloatingBtn extends StatefulWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
@@ -734,28 +798,63 @@ class _FloatingBtn extends StatelessWidget {
   });
 
   @override
+  State<_FloatingBtn> createState() => _FloatingBtnState();
+}
+
+class _FloatingBtnState extends State<_FloatingBtn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressController;
+  late final Animation<double> _pressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _pressScale = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = overrideSize ?? (large ? 56.0 : 44.0);
-    final iconSize = large ? size * 0.5 : size * 0.5;
+    final size = widget.overrideSize ?? (widget.large ? 56.0 : 44.0);
+    final iconSize = size * 0.5;
     return Tooltip(
-      message: tooltip,
+      message: widget.tooltip,
       child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        onTapDown: (_) => _pressController.forward(),
+        onTapUp: (_) {
+          _pressController.reverse();
+          widget.onTap();
+        },
+        onTapCancel: () => _pressController.reverse(),
+        child: ScaleTransition(
+          scale: _pressScale,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: widget.color.withOpacity(0.9),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(widget.icon, color: Colors.white, size: iconSize),
           ),
-          child: Icon(icon, color: Colors.white, size: iconSize),
         ),
       ),
     );
@@ -835,32 +934,56 @@ class _TimerCard extends StatelessWidget {
   final String timeString;
   final TimerStatus status;
   final Color timerColor;
+  final bool isUrgent;
   final AnimationController pulseController;
   final AnimationController blinkController;
+  final AnimationController finishController;
 
   const _TimerCard({
     required this.mode,
     required this.timeString,
     required this.status,
     required this.timerColor,
+    required this.isUrgent,
     required this.pulseController,
     required this.blinkController,
+    required this.finishController,
   });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([pulseController, blinkController]),
+      animation: Listenable.merge([pulseController, blinkController, finishController]),
       builder: (context, _) {
-        // Blink effect when paused
         final opacity = status == TimerStatus.paused
             ? 0.4 + blinkController.value * 0.6
             : 1.0;
 
-        // Subtle scale pulse when running
-        final scale = status == TimerStatus.running
-            ? 1.0 + pulseController.value * 0.008
-            : 1.0;
+        // Scale: gentle pulse running, stronger pulse when urgent, dramatic when finished
+        final scale = status == TimerStatus.finished
+            ? 1.0 + finishController.value * 0.018
+            : status == TimerStatus.running
+                ? 1.0 + pulseController.value * (isUrgent ? 0.012 : 0.006)
+                : 1.0;
+
+        // Dynamic glow color/intensity
+        final urgentGlow = isUrgent
+            ? BoxShadow(
+                color: const Color(0xFFB71C1C)
+                    .withValues(alpha: 0.08 + pulseController.value * 0.18),
+                blurRadius: 20 + pulseController.value * 30,
+                spreadRadius: 2 + pulseController.value * 4,
+              )
+            : null;
+
+        final finishGlow = status == TimerStatus.finished
+            ? BoxShadow(
+                color: const Color(0xFFB71C1C)
+                    .withValues(alpha: 0.20 + finishController.value * 0.35),
+                blurRadius: 30 + finishController.value * 50,
+                spreadRadius: 6 + finishController.value * 10,
+              )
+            : null;
 
         return Transform.scale(
           scale: scale,
@@ -875,18 +998,14 @@ class _TimerCard extends StatelessWidget {
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
-                if (status == TimerStatus.running)
+                if (status == TimerStatus.running && !isUrgent)
                   BoxShadow(
                     color: const Color(0xFF9C5000).withOpacity(0.15),
                     blurRadius: 40,
                     spreadRadius: 4,
                   ),
-                if (status == TimerStatus.finished)
-                  BoxShadow(
-                    color: const Color(0xFFB71C1C).withOpacity(0.25),
-                    blurRadius: 40,
-                    spreadRadius: 8,
-                  ),
+                if (urgentGlow != null) urgentGlow,
+                if (finishGlow != null) finishGlow,
               ],
             ),
             child: Center(
@@ -900,44 +1019,78 @@ class _TimerCard extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: mode == TimerMode.stopwatch
-                                ? const Color(0xFF406E51).withOpacity(0.12)
-                                : const Color(0xFF9C5000).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(24),
+                        // Mode badge with AnimatedSwitcher for smooth mode change
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 350),
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(
+                              scale: Tween<double>(begin: 0.75, end: 1.0)
+                                  .animate(CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeOutBack)),
+                              child: child,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                mode == TimerMode.stopwatch ? Icons.timer_outlined : Icons.timer_rounded,
-                                size: 20,
-                                color: mode == TimerMode.stopwatch ? const Color(0xFF406E51) : const Color(0xFF9C5000),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                mode == TimerMode.stopwatch ? 'STOPWATCH' : 'COUNTDOWN',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: mode == TimerMode.stopwatch ? const Color(0xFF406E51) : const Color(0xFF9C5000),
-                                  letterSpacing: 3,
+                          child: Container(
+                            key: ValueKey(mode),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: mode == TimerMode.stopwatch
+                                  ? const Color(0xFF406E51).withOpacity(0.12)
+                                  : const Color(0xFF9C5000).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  mode == TimerMode.stopwatch
+                                      ? Icons.timer_outlined
+                                      : Icons.timer_rounded,
+                                  size: 20,
+                                  color: mode == TimerMode.stopwatch
+                                      ? const Color(0xFF406E51)
+                                      : const Color(0xFF9C5000),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  mode == TimerMode.stopwatch
+                                      ? 'STOPWATCH'
+                                      : 'COUNTDOWN',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: mode == TimerMode.stopwatch
+                                        ? const Color(0xFF406E51)
+                                        : const Color(0xFF9C5000),
+                                    letterSpacing: 3,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          timeString,
-                          style: GoogleFonts.inter(
-                            fontSize: 140,
-                            fontWeight: FontWeight.w600,
-                            color: timerColor,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                            letterSpacing: -2,
+                        // Animate color transitions on the timer text
+                        TweenAnimationBuilder<Color?>(
+                          tween: ColorTween(
+                              begin: timerColor, end: timerColor),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOut,
+                          builder: (context, color, _) => Text(
+                            timeString,
+                            style: GoogleFonts.inter(
+                              fontSize: 140,
+                              fontWeight: FontWeight.w600,
+                              color: color ?? timerColor,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                              letterSpacing: -2,
+                            ),
                           ),
                         ),
                       ],
@@ -980,14 +1133,28 @@ class _ContestantPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              number.toString().padLeft(2, '0'),
-              style: GoogleFonts.inter(
-                fontSize: 240,
-                height: 1.0, // Removes extra vertical padding from font
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF5C2D0A),
-                letterSpacing: -4,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.80, end: 1.0).animate(
+                    CurvedAnimation(
+                        parent: animation, curve: Curves.easeOutBack),
+                  ),
+                  child: child,
+                ),
+              ),
+              child: Text(
+                number.toString().padLeft(2, '0'),
+                key: ValueKey(number),
+                style: GoogleFonts.inter(
+                  fontSize: 240,
+                  height: 1.0,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5C2D0A),
+                  letterSpacing: -4,
+                ),
               ),
             ),
           ],
