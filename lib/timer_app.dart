@@ -40,6 +40,8 @@ class _TimerHomePageState extends State<TimerHomePage>
       TextEditingController(text: '5');
   final TextEditingController _secondsController =
       TextEditingController(text: '0');
+  final TextEditingController _millisecondsController =
+      TextEditingController(text: '0');
 
   // Fullscreen / settings panel
   bool _isFullscreen = false;
@@ -79,6 +81,7 @@ class _TimerHomePageState extends State<TimerHomePage>
     _hoursController.dispose();
     _minutesController.dispose();
     _secondsController.dispose();
+    _millisecondsController.dispose();
     super.dispose();
   }
 
@@ -89,8 +92,9 @@ class _TimerHomePageState extends State<TimerHomePage>
       final h = int.tryParse(_hoursController.text) ?? 0;
       final m = int.tryParse(_minutesController.text) ?? 0;
       final s = int.tryParse(_secondsController.text) ?? 0;
-      _targetDuration = Duration(hours: h, minutes: m, seconds: s);
-      if (_targetDuration.inSeconds == 0) return;
+      final ms = int.tryParse(_millisecondsController.text) ?? 0;
+      _targetDuration = Duration(hours: h, minutes: m, seconds: s, milliseconds: ms);
+      if (_targetDuration.inMilliseconds == 0) return;
     }
 
     setState(() {
@@ -102,9 +106,9 @@ class _TimerHomePageState extends State<TimerHomePage>
       }
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 10), (t) {
       setState(() {
-        _elapsed += const Duration(seconds: 1);
+        _elapsed += const Duration(milliseconds: 10);
         if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
@@ -121,9 +125,9 @@ class _TimerHomePageState extends State<TimerHomePage>
 
   void _resumeTimer() {
     setState(() => _status = TimerStatus.running);
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 10), (t) {
       setState(() {
-        _elapsed += const Duration(seconds: 1);
+        _elapsed += const Duration(milliseconds: 10);
         if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
@@ -163,8 +167,9 @@ class _TimerHomePageState extends State<TimerHomePage>
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s';
-    return '$m:$s';
+    final cs = (d.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
+    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s.$cs';
+    return '$m:$s.$cs';
   }
 
   Color get _timerColor {
@@ -506,6 +511,19 @@ class _TimerHomePageState extends State<TimerHomePage>
                       controller: _secondsController,
                       label: 'SEC',
                       max: 59,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('.',
+                          style: GoogleFonts.notoSerif(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF5C2D0A))),
+                    ),
+                    _SettingsField(
+                      controller: _millisecondsController,
+                      label: 'MS',
+                      max: 999,
                     ),
                   ],
                 ),
