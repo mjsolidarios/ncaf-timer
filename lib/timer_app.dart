@@ -92,8 +92,8 @@ class _TimerHomePageState extends State<TimerHomePage>
       final h = int.tryParse(_hoursController.text) ?? 0;
       final m = int.tryParse(_minutesController.text) ?? 0;
       final s = int.tryParse(_secondsController.text) ?? 0;
-      final ms = int.tryParse(_millisecondsController.text) ?? 0;
-      _targetDuration = Duration(hours: h, minutes: m, seconds: s, milliseconds: ms);
+      final cs = int.tryParse(_millisecondsController.text) ?? 0;
+      _targetDuration = Duration(hours: h, minutes: m, seconds: s, milliseconds: cs * 10);
       if (_targetDuration.inMilliseconds == 0) return;
     }
 
@@ -106,9 +106,9 @@ class _TimerHomePageState extends State<TimerHomePage>
       }
     });
 
-    _timer = Timer.periodic(const Duration(milliseconds: 10), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       setState(() {
-        _elapsed += const Duration(milliseconds: 10);
+        _elapsed += const Duration(milliseconds: 100);
         if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
@@ -125,9 +125,9 @@ class _TimerHomePageState extends State<TimerHomePage>
 
   void _resumeTimer() {
     setState(() => _status = TimerStatus.running);
-    _timer = Timer.periodic(const Duration(milliseconds: 10), (t) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       setState(() {
-        _elapsed += const Duration(milliseconds: 10);
+        _elapsed += const Duration(milliseconds: 100);
         if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
@@ -167,9 +167,9 @@ class _TimerHomePageState extends State<TimerHomePage>
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final cs = (d.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
-    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s.$cs';
-    return '$m:$s.$cs';
+    final centiseconds = (d.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
+    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s.$centiseconds';
+    return '$m:$s.$centiseconds';
   }
 
   Color get _timerColor {
@@ -522,8 +522,8 @@ class _TimerHomePageState extends State<TimerHomePage>
                     ),
                     _SettingsField(
                       controller: _millisecondsController,
-                      label: 'MS',
-                      max: 999,
+                      label: 'CS',
+                      max: 99,
                     ),
                   ],
                 ),
