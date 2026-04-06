@@ -40,7 +40,7 @@ class _TimerHomePageState extends State<TimerHomePage>
       TextEditingController(text: '5');
   final TextEditingController _secondsController =
       TextEditingController(text: '0');
-  final TextEditingController _millisecondsController =
+  final TextEditingController _centisecondsController =
       TextEditingController(text: '0');
 
   // Fullscreen / settings panel
@@ -81,7 +81,7 @@ class _TimerHomePageState extends State<TimerHomePage>
     _hoursController.dispose();
     _minutesController.dispose();
     _secondsController.dispose();
-    _millisecondsController.dispose();
+    _centisecondsController.dispose();
     super.dispose();
   }
 
@@ -92,7 +92,7 @@ class _TimerHomePageState extends State<TimerHomePage>
       final h = int.tryParse(_hoursController.text) ?? 0;
       final m = int.tryParse(_minutesController.text) ?? 0;
       final s = int.tryParse(_secondsController.text) ?? 0;
-      final cs = int.tryParse(_millisecondsController.text) ?? 0;
+      final cs = int.tryParse(_centisecondsController.text) ?? 0;
       _targetDuration = Duration(hours: h, minutes: m, seconds: s, milliseconds: cs * 10);
       if (_targetDuration.inMilliseconds == 0) return;
     }
@@ -167,9 +167,9 @@ class _TimerHomePageState extends State<TimerHomePage>
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final centiseconds = (d.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
-    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s.$centiseconds';
-    return '$m:$s.$centiseconds';
+    final cs = (d.inMilliseconds.remainder(1000) ~/ 10).toString().padLeft(2, '0');
+    if (h > 0) return '${h.toString().padLeft(2, '0')}:$m:$s.$cs';
+    return '$m:$s.$cs';
   }
 
   Color get _timerColor {
@@ -521,7 +521,7 @@ class _TimerHomePageState extends State<TimerHomePage>
                               color: const Color(0xFF5C2D0A))),
                     ),
                     _SettingsField(
-                      controller: _millisecondsController,
+                      controller: _centisecondsController,
                       label: 'CS',
                       max: 99,
                     ),
