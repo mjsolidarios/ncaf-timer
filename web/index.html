@@ -46,9 +46,71 @@
       background-color: #FEFCF1;
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
+
+    #app-launcher {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #FEFCF1;
+      z-index: 9999;
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(64, 110, 81, 0.2); 
+      border-top-color: #406E51;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+
+    .loading-text {
+      color: #9C5000;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 14px;
+      text-transform: uppercase;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
+  <!-- UX Loader -->
+  <div id="app-launcher">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading Timer...</div>
+  </div>
+
+  <!-- Fade out loader when flutter initializes -->
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      var loader = document.getElementById('app-launcher');
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(function() { 
+          if(loader.parentNode) loader.parentNode.removeChild(loader); 
+        }, 600);
+      }
+    });
+  </script>
+
   <!-- This script installs service_worker.js to provide PWA functionality to
        application. For more information, see:
        https://developers.google.com/web/fundamentals/primers/service-workers -->
