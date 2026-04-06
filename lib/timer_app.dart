@@ -24,7 +24,7 @@ class _TimerHomePageState extends State<TimerHomePage>
 
   // Event / contest name
   final TextEditingController _nameController =
-      TextEditingController(text: 'STANDARD CHORALE\nCONTEST');
+      TextEditingController(text: 'CONTEST NAME HERE');
   bool _isEditingName = false;
   final FocusNode _nameFocusNode = FocusNode();
 
@@ -214,30 +214,44 @@ class _TimerHomePageState extends State<TimerHomePage>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top bar, Timer card, Bottom Label in left column
+        // Top bar, Timer card, Bottom Label perfectly aligned vertically & bounded horizontally
         Expanded(
           flex: 6,
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _TopBar(
-                nameController: _nameController,
-                isEditingName: _isEditingName,
-                nameFocusNode: _nameFocusNode,
-                onNameTap: () => setState(() => _isEditingName = true),
-                onNameSubmit: () => setState(() => _isEditingName = false),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: _TimerCard(
-                  timeString: _formatRemaining(),
-                  status: _status,
-                  timerColor: _timerColor,
-                  pulseController: _pulseController,
-                  blinkController: _blinkController,
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 650),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Spacer(),
+                      _TopBar(
+                        nameController: _nameController,
+                        isEditingName: _isEditingName,
+                        nameFocusNode: _nameFocusNode,
+                        onNameTap: () => setState(() => _isEditingName = true),
+                        onNameSubmit: () => setState(() => _isEditingName = false),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        flex: 8,
+                        child: _TimerCard(
+                          timeString: _formatRemaining(),
+                          status: _status,
+                          timerColor: _timerColor,
+                          pulseController: _pulseController,
+                          blinkController: _blinkController,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _BottomLabel(nameController: _nameController),
+                      const Spacer(),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              _BottomLabel(nameController: _nameController),
             ],
           ),
         ),
@@ -256,39 +270,50 @@ class _TimerHomePageState extends State<TimerHomePage>
   Widget _buildNarrowBody() {
     return Column(
       children: [
-        // Top bar, Timer card, Bottom Label
+        // Top bar, Timer card, Bottom Label perfectly constraint matched
         Expanded(
-          flex: 5,
-          child: Column(
+          flex: 6,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _TopBar(
-                nameController: _nameController,
-                isEditingName: _isEditingName,
-                nameFocusNode: _nameFocusNode,
-                onNameTap: () => setState(() => _isEditingName = true),
-                onNameSubmit: () => setState(() => _isEditingName = false),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: _TimerCard(
-                  timeString: _formatRemaining(),
-                  status: _status,
-                  timerColor: _timerColor,
-                  pulseController: _pulseController,
-                  blinkController: _blinkController,
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _TopBar(
+                        nameController: _nameController,
+                        isEditingName: _isEditingName,
+                        nameFocusNode: _nameFocusNode,
+                        onNameTap: () => setState(() => _isEditingName = true),
+                        onNameSubmit: () => setState(() => _isEditingName = false),
+                      ),
+                      const SizedBox(height: 16),
+                      _TimerCard(
+                        timeString: _formatRemaining(),
+                        status: _status,
+                        timerColor: _timerColor,
+                        pulseController: _pulseController,
+                        blinkController: _blinkController,
+                      ),
+                      const SizedBox(height: 12),
+                      _BottomLabel(nameController: _nameController),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              _BottomLabel(nameController: _nameController),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         // Contestant panel
         Expanded(
-          flex: 3,
+          flex: 4,
           child: _ContestantPanel(number: _contestantNumber),
         ),
+        const SizedBox(height: 90), // Reserved space for floating action buttons
       ],
     );
   }
@@ -376,8 +401,8 @@ class _TimerHomePageState extends State<TimerHomePage>
                       fontSize: 16,
                     ),
                     border: InputBorder.none,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -449,8 +474,7 @@ class _TimerHomePageState extends State<TimerHomePage>
                     onDecrement: () => setState(() {
                       if (_contestantNumber > 1) _contestantNumber--;
                     }),
-                    onIncrement: () =>
-                        setState(() => _contestantNumber++),
+                    onIncrement: () => setState(() => _contestantNumber++),
                     onChanged: (v) => setState(() => _contestantNumber = v),
                   ),
                 ],
@@ -690,8 +714,8 @@ class _TopBar extends StatelessWidget {
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white.withOpacity(0.7),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               suffixIcon: IconButton(
                 onPressed: onNameSubmit,
                 icon: const Icon(Icons.check_circle_outline,
