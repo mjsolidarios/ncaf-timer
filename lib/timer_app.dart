@@ -222,14 +222,15 @@ class _TimerHomePageState extends State<TimerHomePage>
   Widget _buildMainDisplay(Size size, bool isLandscape) {
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: isLandscape ? size.width * 0.05 : 16,
-        vertical: isLandscape ? size.height * 0.06 : 20,
+        horizontal: isLandscape ? size.width * 0.05 : size.width * 0.04,
+        vertical: isLandscape ? size.height * 0.06 : size.height * 0.03,
       ),
-      child: isLandscape ? _buildWideBody() : _buildNarrowBody(),
+      child: isLandscape ? _buildWideBody(size) : _buildNarrowBody(size),
     );
   }
 
-  Widget _buildWideBody() {
+  Widget _buildWideBody(Size size) {
+    final spacing = (size.height * 0.015).clamp(8.0, 20.0);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -240,42 +241,39 @@ class _TimerHomePageState extends State<TimerHomePage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 650),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Spacer(),
-                      _TopBar(
-                        nameController: _nameController,
-                        isEditingName: _isEditingName,
-                        nameFocusNode: _nameFocusNode,
-                        onNameTap: () => setState(() => _isEditingName = true),
-                        onNameSubmit: () => setState(() => _isEditingName = false),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Spacer(),
+                    _TopBar(
+                      nameController: _nameController,
+                      isEditingName: _isEditingName,
+                      nameFocusNode: _nameFocusNode,
+                      onNameTap: () => setState(() => _isEditingName = true),
+                      onNameSubmit: () => setState(() => _isEditingName = false),
+                    ),
+                    SizedBox(height: spacing),
+                    Expanded(
+                      flex: 8,
+                      child: _TimerCard(
+                        mode: _mode,
+                        timeString: _formatTimerDisplay(),
+                        status: _status,
+                        timerColor: _timerColor,
+                        pulseController: _pulseController,
+                        blinkController: _blinkController,
                       ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        flex: 8,
-                        child: _TimerCard(
-                          mode: _mode,
-                          timeString: _formatTimerDisplay(),
-                          status: _status,
-                          timerColor: _timerColor,
-                          pulseController: _pulseController,
-                          blinkController: _blinkController,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _BottomLabel(nameController: _nameController),
-                      const Spacer(),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: spacing * 0.6),
+                    _BottomLabel(nameController: _nameController),
+                    const Spacer(),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 24),
+        SizedBox(width: (size.width * 0.015).clamp(16.0, 40.0)),
         // Contestant panel
         Expanded(
           flex: 4,
@@ -287,7 +285,8 @@ class _TimerHomePageState extends State<TimerHomePage>
     );
   }
 
-  Widget _buildNarrowBody() {
+  Widget _buildNarrowBody(Size size) {
+    final spacing = (size.height * 0.02).clamp(12.0, 32.0);
     return Column(
       children: [
         // Top bar, Timer card, Bottom Label perfectly constraint matched
@@ -297,9 +296,7 @@ class _TimerHomePageState extends State<TimerHomePage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Column(
+                child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -310,7 +307,7 @@ class _TimerHomePageState extends State<TimerHomePage>
                         onNameTap: () => setState(() => _isEditingName = true),
                         onNameSubmit: () => setState(() => _isEditingName = false),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: spacing),
                       _TimerCard(
                         mode: _mode,
                         timeString: _formatTimerDisplay(),
@@ -319,16 +316,15 @@ class _TimerHomePageState extends State<TimerHomePage>
                         pulseController: _pulseController,
                         blinkController: _blinkController,
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: spacing * 0.75),
                       _BottomLabel(nameController: _nameController),
                     ],
                   ),
                 ),
-              ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: spacing),
         // Contestant panel
         Expanded(
           flex: 4,
@@ -649,9 +645,13 @@ class _TimerHomePageState extends State<TimerHomePage>
   // ── Floating control buttons ──────────────────────────────────────────────
 
   Widget _buildFloatingButtons() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scale = (screenWidth / 900).clamp(1.0, 2.0);
+    final smallSize = 44.0 * scale;
+    final largeSize = 56.0 * scale;
     return Positioned(
-      bottom: 16,
-      right: 16,
+      bottom: 16 * scale,
+      right: 16 * scale,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -661,8 +661,9 @@ class _TimerHomePageState extends State<TimerHomePage>
             icon: Icons.settings_rounded,
             tooltip: 'Settings',
             onTap: () => setState(() => _showSettings = true),
+            overrideSize: smallSize,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * scale),
           // Play / Pause / Resume
           if (_status == TimerStatus.idle || _status == TimerStatus.finished)
             _FloatingBtn(
@@ -671,6 +672,7 @@ class _TimerHomePageState extends State<TimerHomePage>
               color: const Color(0xFF406E51),
               onTap: _startTimer,
               large: true,
+              overrideSize: largeSize,
             )
           else if (_status == TimerStatus.running)
             _FloatingBtn(
@@ -679,6 +681,7 @@ class _TimerHomePageState extends State<TimerHomePage>
               color: const Color(0xFF9C5000),
               onTap: _pauseTimer,
               large: true,
+              overrideSize: largeSize,
             )
           else
             _FloatingBtn(
@@ -687,20 +690,23 @@ class _TimerHomePageState extends State<TimerHomePage>
               color: const Color(0xFF406E51),
               onTap: _resumeTimer,
               large: true,
+              overrideSize: largeSize,
             ),
           if (_status != TimerStatus.idle) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 8 * scale),
             _FloatingBtn(
               icon: Icons.refresh_rounded,
               tooltip: 'Reset',
               onTap: _resetTimer,
+              overrideSize: smallSize,
             ),
           ],
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * scale),
           _FloatingBtn(
             icon: _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
             tooltip: _isFullscreen ? 'Exit Fullscreen' : 'Fullscreen',
             onTap: _toggleFullscreen,
+            overrideSize: smallSize,
           ),
         ],
       ),
@@ -716,6 +722,7 @@ class _FloatingBtn extends StatelessWidget {
   final VoidCallback onTap;
   final Color color;
   final bool large;
+  final double? overrideSize;
 
   const _FloatingBtn({
     required this.icon,
@@ -723,11 +730,13 @@ class _FloatingBtn extends StatelessWidget {
     required this.onTap,
     this.color = const Color(0xFF5C3D1A),
     this.large = false,
+    this.overrideSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    final size = large ? 56.0 : 44.0;
+    final size = overrideSize ?? (large ? 56.0 : 44.0);
+    final iconSize = large ? size * 0.5 : size * 0.5;
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -746,7 +755,7 @@ class _FloatingBtn extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(icon, color: Colors.white, size: large ? 28 : 22),
+          child: Icon(icon, color: Colors.white, size: iconSize),
         ),
       ),
     );
@@ -801,7 +810,7 @@ class _TopBar extends StatelessWidget {
         : GestureDetector(
             onTap: onNameTap,
             child: FittedBox(
-              fit: BoxFit.scaleDown,
+              fit: BoxFit.contain,
               alignment: Alignment.center,
               child: Text(
                 nameController.text,
@@ -997,14 +1006,20 @@ class _BottomLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      nameController.text.replaceAll('\n', ' '),
-      textAlign: TextAlign.center,
-      style: GoogleFonts.notoSerif(
-        fontSize: 16,
-        fontWeight: FontWeight.w800,
-        color: const Color(0xFF5C2D0A),
-        letterSpacing: 2,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scale = (screenWidth / 900).clamp(1.0, 2.5);
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.center,
+      child: Text(
+        nameController.text.replaceAll('\n', ' '),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.notoSerif(
+          fontSize: 28 * scale,
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF5C2D0A),
+          letterSpacing: 2,
+        ),
       ),
     );
   }
