@@ -13,10 +13,12 @@ class TimerHomePage extends StatefulWidget {
 }
 
 enum TimerStatus { idle, running, paused, finished }
+enum TimerMode { countdown, stopwatch }
 
 class _TimerHomePageState extends State<TimerHomePage>
     with TickerProviderStateMixin {
   // Timer state
+  TimerMode _mode = TimerMode.stopwatch;
   TimerStatus _status = TimerStatus.idle;
   Duration _elapsed = Duration.zero;
   Duration _targetDuration = const Duration(minutes: 5);
@@ -83,21 +85,27 @@ class _TimerHomePageState extends State<TimerHomePage>
   // ── Timer logic ──────────────────────────────────────────────────────────
 
   void _startTimer() {
-    final h = int.tryParse(_hoursController.text) ?? 0;
-    final m = int.tryParse(_minutesController.text) ?? 0;
-    final s = int.tryParse(_secondsController.text) ?? 0;
-    _targetDuration = Duration(hours: h, minutes: m, seconds: s);
-    if (_targetDuration.inSeconds == 0) return;
+    if (_mode == TimerMode.countdown) {
+      final h = int.tryParse(_hoursController.text) ?? 0;
+      final m = int.tryParse(_minutesController.text) ?? 0;
+      final s = int.tryParse(_secondsController.text) ?? 0;
+      _targetDuration = Duration(hours: h, minutes: m, seconds: s);
+      if (_targetDuration.inSeconds == 0) return;
+    }
 
     setState(() {
       _status = TimerStatus.running;
-      if (_elapsed >= _targetDuration) _elapsed = Duration.zero;
+      if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
+        _elapsed = Duration.zero;
+      } else if (_mode == TimerMode.stopwatch && _status == TimerStatus.finished) {
+         _elapsed = Duration.zero; // Unlikely, but safety measure
+      }
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       setState(() {
         _elapsed += const Duration(seconds: 1);
-        if (_elapsed >= _targetDuration) {
+        if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
           t.cancel();
@@ -116,7 +124,7 @@ class _TimerHomePageState extends State<TimerHomePage>
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       setState(() {
         _elapsed += const Duration(seconds: 1);
-        if (_elapsed >= _targetDuration) {
+        if (_mode == TimerMode.countdown && _elapsed >= _targetDuration) {
           _elapsed = _targetDuration;
           _status = TimerStatus.finished;
           t.cancel();
@@ -144,10 +152,14 @@ class _TimerHomePageState extends State<TimerHomePage>
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  /// Formats a duration as MM:SS (or HH:MM:SS when ≥ 1 hour).
-  String _formatRemaining() {
-    final remaining = (_targetDuration - _elapsed);
-    final d = remaining.isNegative ? Duration.zero : remaining;
+  /// Formats the current time based on the active mode
+  String _formatTimerDisplay() {
+    final d = _mode == TimerMode.stopwatch
+        ? _elapsed
+        : (_targetDuration - _elapsed).isNegative
+            ? Duration.zero
+            : (_targetDuration - _elapsed);
+            
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -156,6 +168,8 @@ class _TimerHomePageState extends State<TimerHomePage>
   }
 
   Color get _timerColor {
+    if (_mode == TimerMode.stopwatch) return const Color(0xFF1A1A1A); // Stopwatch never triggers urgency
+    
     if (_status == TimerStatus.finished) return const Color(0xFFB71C1C);
     final remaining = _targetDuration - _elapsed;
     if (remaining.inSeconds <= 30 && _status == TimerStatus.running) {
@@ -238,7 +252,8 @@ class _TimerHomePageState extends State<TimerHomePage>
                       Expanded(
                         flex: 8,
                         child: _TimerCard(
-                          timeString: _formatRemaining(),
+                          mode: _mode,
+                          timeString: _formatTimerDisplay(),
                           status: _status,
                           timerColor: _timerColor,
                           pulseController: _pulseController,
@@ -292,7 +307,8 @@ class _TimerHomePageState extends State<TimerHomePage>
                       ),
                       const SizedBox(height: 16),
                       _TimerCard(
-                        timeString: _formatRemaining(),
+                        mode: _mode,
+                        timeString: _formatTimerDisplay(),
                         status: _status,
                         timerColor: _timerColor,
                         pulseController: _pulseController,
@@ -367,6 +383,44 @@ class _TimerHomePageState extends State<TimerHomePage>
               ),
               const Divider(height: 24, color: Color(0xFFD4C4A8)),
 
+              // Mode Toggle
+              Text(
+                'Timer Mode',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: const Color(0xFF9C5000),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<TimerMode>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                      value: TimerMode.stopwatch,
+                      icon: Icon(Icons.timer_outlined),
+                      label: Text('Stopwatch')),
+                  ButtonSegment(
+                      value: TimerMode.countdown,
+                      icon: Icon(Icons.timer_rounded),
+                      label: Text('Countdown')),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (Set<TimerMode> newSelection) {
+                  setState(() {
+                    _mode = newSelection.first;
+                    _resetTimer();
+                  });
+                },
+                style: SegmentedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  selectedForegroundColor: Colors.white,
+                  selectedBackgroundColor: const Color(0xFF406E51),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Contest Name
               Text(
                 'Contest Name',
@@ -410,51 +464,53 @@ class _TimerHomePageState extends State<TimerHomePage>
               const SizedBox(height: 24),
 
               // Duration
-              Text(
-                'Duration',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: const Color(0xFF9C5000),
+              if (_mode == TimerMode.countdown) ...[
+                Text(
+                  'Duration',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: const Color(0xFF9C5000),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _SettingsField(
-                    controller: _hoursController,
-                    label: 'HRS',
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(':',
-                        style: GoogleFonts.notoSerif(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF5C2D0A))),
-                  ),
-                  _SettingsField(
-                    controller: _minutesController,
-                    label: 'MIN',
-                    max: 59,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(':',
-                        style: GoogleFonts.notoSerif(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF5C2D0A))),
-                  ),
-                  _SettingsField(
-                    controller: _secondsController,
-                    label: 'SEC',
-                    max: 59,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _SettingsField(
+                      controller: _hoursController,
+                      label: 'HRS',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(':',
+                          style: GoogleFonts.notoSerif(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF5C2D0A))),
+                    ),
+                    _SettingsField(
+                      controller: _minutesController,
+                      label: 'MIN',
+                      max: 59,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(':',
+                          style: GoogleFonts.notoSerif(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF5C2D0A))),
+                    ),
+                    _SettingsField(
+                      controller: _secondsController,
+                      label: 'SEC',
+                      max: 59,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Contestant number
               Text(
@@ -748,6 +804,7 @@ class _TopBar extends StatelessWidget {
 // ─── Timer Card ───────────────────────────────────────────────────────────────
 
 class _TimerCard extends StatelessWidget {
+  final TimerMode mode;
   final String timeString;
   final TimerStatus status;
   final Color timerColor;
@@ -755,6 +812,7 @@ class _TimerCard extends StatelessWidget {
   final AnimationController blinkController;
 
   const _TimerCard({
+    required this.mode,
     required this.timeString,
     required this.status,
     required this.timerColor,
@@ -812,15 +870,50 @@ class _TimerCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 48, vertical: 24),
-                    child: Text(
-                      timeString,
-                      style: GoogleFonts.inter(
-                        fontSize: 140,
-                        fontWeight: FontWeight.w600,
-                        color: timerColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        letterSpacing: -2,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: mode == TimerMode.stopwatch
+                                ? const Color(0xFF406E51).withOpacity(0.12)
+                                : const Color(0xFF9C5000).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                mode == TimerMode.stopwatch ? Icons.timer_outlined : Icons.timer_rounded,
+                                size: 20,
+                                color: mode == TimerMode.stopwatch ? const Color(0xFF406E51) : const Color(0xFF9C5000),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                mode == TimerMode.stopwatch ? 'STOPWATCH' : 'COUNTDOWN',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: mode == TimerMode.stopwatch ? const Color(0xFF406E51) : const Color(0xFF9C5000),
+                                  letterSpacing: 3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          timeString,
+                          style: GoogleFonts.inter(
+                            fontSize: 140,
+                            fontWeight: FontWeight.w600,
+                            color: timerColor,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                            letterSpacing: -2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
