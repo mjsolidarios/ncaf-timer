@@ -950,6 +950,9 @@ class _TimerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleText = (screenWidth / 900).clamp(1.0, 2.5);
+
     return AnimatedBuilder(
       animation: Listenable.merge([pulseController, blinkController, finishController]),
       builder: (context, _) {
@@ -1059,7 +1062,7 @@ class _TimerCard extends StatelessWidget {
                                       ? 'STOPWATCH'
                                       : 'COUNTDOWN',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
+                                    fontSize: 14 * scaleText,
                                     fontWeight: FontWeight.w800,
                                     color: mode == TimerMode.stopwatch
                                         ? const Color(0xFF406E51)
@@ -1081,7 +1084,7 @@ class _TimerCard extends StatelessWidget {
                           builder: (context, color, _) => Text(
                             timeString,
                             style: GoogleFonts.inter(
-                              fontSize: 140,
+                              fontSize: 140 * scaleText,
                               fontWeight: FontWeight.w600,
                               color: color ?? timerColor,
                               fontFeatures: const [
@@ -1113,6 +1116,9 @@ class _ContestantPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleText = (screenWidth / 900).clamp(1.0, 2.5);
+
     return Center(
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -1124,7 +1130,7 @@ class _ContestantPanel extends StatelessWidget {
             Text(
               'CONTESTANT',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 20,
+                fontSize: 20 * scaleText,
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF406E51),
                 letterSpacing: 4,
@@ -1147,7 +1153,7 @@ class _ContestantPanel extends StatelessWidget {
                 number.toString().padLeft(2, '0'),
                 key: ValueKey(number),
                 style: GoogleFonts.inter(
-                  fontSize: 240,
+                  fontSize: 240 * scaleText,
                   height: 1.0,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF5C2D0A),
@@ -1255,9 +1261,7 @@ class _SettingsField extends StatelessWidget {
   }
 }
 
-// ─── Contestant Stepper ───────────────────────────────────────────────────────
-
-class _ContestantStepper extends StatelessWidget {
+class _ContestantStepper extends StatefulWidget {
   final int value;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
@@ -1271,32 +1275,103 @@ class _ContestantStepper extends StatelessWidget {
   });
 
   @override
+  State<_ContestantStepper> createState() => _ContestantStepperState();
+}
+
+class _ContestantStepperState extends State<_ContestantStepper> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _format(widget.value));
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        _commit();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _ContestantStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      if (!_focusNode.hasFocus) {
+        _controller.text = _format(widget.value);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  String _format(int val) => val.toString().padLeft(2, '0');
+
+  void _commit() {
+    final val = int.tryParse(_controller.text) ?? 1;
+    final finalVal = val > 0 ? val : 1;
+    widget.onChanged(finalVal);
+    _controller.text = _format(finalVal);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Row(
         children: [
-          _StepBtn(icon: Icons.remove_rounded, onTap: onDecrement),
+          _StepBtn(
+            icon: Icons.remove_rounded,
+            onTap: () {
+              widget.onDecrement();
+              // Update text immediately when using external buttons if we don't have focus
+              if (!_focusNode.hasFocus) {
+                _controller.text = _format(widget.value - 1 > 0 ? widget.value - 1 : 1);
+              }
+            },
+          ),
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: const EdgeInsets.symmetric(vertical: 0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFD4C4A8)),
               ),
-              child: Text(
-                value.toString().padLeft(2, '0'),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
                 textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 style: GoogleFonts.notoSerif(
                   fontSize: 40,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF5C2D0A),
                 ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
+                ),
+                onSubmitted: (_) => _commit(),
               ),
             ),
           ),
-          _StepBtn(icon: Icons.add_rounded, onTap: onIncrement),
+          _StepBtn(
+            icon: Icons.add_rounded,
+            onTap: () {
+              widget.onIncrement();
+              if (!_focusNode.hasFocus) {
+                _controller.text = _format(widget.value + 1);
+              }
+            },
+          ),
         ],
       ),
     );
