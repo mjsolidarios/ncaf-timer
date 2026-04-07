@@ -184,14 +184,12 @@ class _TimerHomePageState extends State<TimerHomePage>
   }
 
   Color get _timerColor {
-    if (_mode == TimerMode.stopwatch) return const Color(0xFF1A1A1A);
-    
     if (_status == TimerStatus.finished) return const Color(0xFFB71C1C);
     final remaining = _targetDuration - _elapsed;
-    if (remaining.inSeconds <= 30 && _status == TimerStatus.running) {
+    if (_mode == TimerMode.countdown && remaining.inSeconds <= 30 && _status == TimerStatus.running) {
       return const Color(0xFFB71C1C);
     }
-    return const Color(0xFF1A1A1A);
+    return const Color(0xFF406E51);
   }
 
   bool get _isUrgent =>
