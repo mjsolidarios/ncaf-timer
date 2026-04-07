@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fullscreen_window/fullscreen_window.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TimerHomePage extends StatefulWidget {
@@ -156,8 +157,12 @@ class _TimerHomePageState extends State<TimerHomePage>
     });
   }
 
-  void _toggleFullscreen() {
+  void _toggleFullscreen() async {
     setState(() => _isFullscreen = !_isFullscreen);
+    try {
+      FullScreenWindow.setFullScreen(_isFullscreen);
+    } catch (_) {}
+    
     if (_isFullscreen) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     } else {
